@@ -24,6 +24,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
+                    echo "Checking out the Git repository..."
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: "*/${params.GIT_BRANCH}"]],
@@ -36,6 +37,7 @@ pipeline {
         stage('Build with Ant') {
             steps {
                 script {
+                    echo "Building with Ant..."
                     def antCMD = "${ANT_HOME}/bin/ant"
                     sh "${antCMD} -f build.xml -Ddatabase.name=${params.DATABASE_NAME}"
                 }
@@ -45,8 +47,16 @@ pipeline {
         stage('Deploy to Nexus') {
             steps {
                 script {
+                    echo "Deploying to Nexus..."
                     def mavenCMD = "${MAVEN_HOME}/bin/mvn"
-                    sh "${mavenCMD} deploy -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true"
+                    def deployGoal = params.NEXUS_BUILD_TYPE == 'release' ? 'snapshot' : 'deploy:deploy-file'
+
+                    sh "${mavenCMD} ${deployGoal} -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true"
+
+                    // Add additional parameters and settings for release or snapshot deployment
+                    if (params.NEXUS_BUILD_TYPE == 'release') {
+                        sh "${mavenCMD} org.sonatype.plugins:nexus-staging-maven-plugin:1.6.8:release -DnexusUrl=https://your.nexus.url -DserverId=${NEXUS_REPO_ID}"
+                    }
                 }
             }
         }
