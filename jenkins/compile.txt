@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+    environment {
+        REPO_URL = 'https://your-bitbucket-server.com/scm/yourproject/your-repo.git'
+        CREDENTIALS_ID = 'your-credentials-id'
+        JAVA_OPTS = '-Dproperty=value'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM', 
+                    branches: [[name: "*/${env.BRANCH_NAME}"]],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [], 
+                    submoduleCfg: [], 
+                    userRemoteConfigs: [[
+                        credentialsId: "${env.CREDENTIALS_ID}", 
+                        url: "${env.REPO_URL}"
+                    ]]
+                ])
+            }
+        }
+        stage('Build') {
+            steps {
+                script {
+                    // Generate the current date string
+                    def currentDate = new Date().format('yyyyMMdd')
+                    // Combine the date and build ID
+                    def buildIdentifier = "${currentDate}-${env.BUILD_ID}"
+                    // For Windows agents
+                    bat "set JAVA_OPTS=${env.JAVA_OPTS} && ant your-target -DbuildIdentifier=${buildIdentifier}"
+                    // For Unix/Linux agents, uncomment the following line and comment out the bat line above
+                    // sh 'export JAVA_OPTS="${env.JAVA_OPTS}" && ant your-target -DbuildIdentifier=${buildIdentifier}'
+                }
+            }
+        }
+    }
+    // Define any post-build actions
+}
