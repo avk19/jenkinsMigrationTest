@@ -4,6 +4,7 @@ pipeline {
         REPO_URL = 'https://your-bitbucket-server.com/scm/yourproject/your-repo.git'
         CREDENTIALS_ID = 'your-credentials-id'
         JAVA_OPTS = '-Dproperty=value'
+        PATH = "${env.JAVA_HOME}\\bin;${env.PATH}"
     }
     stages {
         stage('Checkout') {
