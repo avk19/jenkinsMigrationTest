@@ -1,0 +1,29 @@
+pipeline {
+    agent any
+    environment {
+        // Define your repository - ensure this matches your Bitbucket Server repo URL
+        REPO_URL = 'https://your-bitbucket-server.com/scm/yourproject/your-repo.git'
+        // CredentialsId - The ID of the credentials stored in Jenkins used for repository access
+        CREDENTIALS_ID = 'your-credentials-id'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                // Uses the Git plugin to check out the specific branch this Jenkinsfile is in
+                checkout([
+                    $class: 'GitSCM', 
+                    branches: [[name: "*/${env.BRANCH_NAME}"]],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [], 
+                    submoduleCfg: [], 
+                    userRemoteConfigs: [[
+                        credentialsId: "${env.CREDENTIALS_ID}", 
+                        url: "${env.REPO_URL}"
+                    ]]
+                ])
+            }
+        }
+        // Add additional stages as needed
+    }
+    // Define any post-build actions
+}
