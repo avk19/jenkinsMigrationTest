@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+
+    environment {
+        REPO_URL = 'https://your-bitbucket-server.com/scm/yourproject/your-repo.git'
+        CREDENTIALS_ID = 'your-credentials-id'
+        JAVA_HOME = tool 'JDK_1.8' // Assuming JDK 1.8 is configured in Jenkins as a tool
+        ANT_HOME = tool 'ANT_HOME' // Assuming Ant is configured in Jenkins as a tool
+        MAVEN_HOME = tool 'Maven' // Assuming Maven is configured in Jenkins as a tool
+        EMAIL_NOTIFICATION = 'your.email@example.com'
+        // Define the MAVEN_OPTS environment variable with the active profile
+        MAVEN_OPTS = "-P your-maven-profile"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${env.BRANCH_NAME}"]],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [],
+                    submoduleCfg: [],
+                    userRemoteConfigs: [[
+                        credentialsId: "${env.CREDENTIALS_ID}",
+                        url: "${env.REPO_URL}"
+                    ]]
+                ])
+            }
+        }
+
+        stage('Build with Ant') {
+            steps {
+                script {
+                    // Set up environment for Ant
+                    def antHome = tool name: 'Ant', type: 'hudson.tasks.Ant$AntInstallation'
+                    env.PATH = "${antHome}/bin:${env.PATH}"
+
+                    // Run Ant target
+                    sh "${antHome}/bin/ant your-ant-target"
+                }
+            }
+        }
+
+        stage('Upload Artifact with Maven') {
+            steps {
+                script {
+                    // Set up environment for Maven
+                    def mavenHome = tool name: 'Maven', type: 'hudson.tasks.Maven$MavenInstallation'
+                    env.PATH = "${mavenHome}/bin:${env.PATH}"
+
+                    // Run Maven upload with the active profile
+                    sh "${mavenHome}/bin/mvn deploy"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                // Send success email
+                emailext (
+                    subject: "Build Success: ${env.JOB_NAME} ${env.BUILD_NUMBER}",
+                    body: "The build was successful. Check Jenkins for details.",
+                    recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                    to: "${env.EMAIL_NOTIFICATION}"
+                )
+            }
+        }
+        failure {
+            script {
+                // Send failure email
+                emailext (
+                    subject: "Build Failure: ${env.JOB_NAME} ${env.BUILD_NUMBER}",
+                    body: "The build failed. Check Jenkins for details.",
+                    recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                    to: "${env.EMAIL_NOTIFICATION}"
+                )
+            }
+        }
+    }
+}
