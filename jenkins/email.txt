@@ -1,13 +1,12 @@
 pipeline {
     agent any
-    
+
     environment {
         REPO_URL = 'https://your-bitbucket-server.com/scm/yourproject/your-repo.git'
         CREDENTIALS_ID = 'your-credentials-id'
-        JAVA_HOME = tool 'JDK_1.8' // Assuming JDK 1.8 is configured in Jenkins as a tool
-        M2_HOME = tool 'Maven3' // Assuming Maven 3 is configured in Jenkins as a tool
-        MAVEN_SETTINGS_FILE = credentials('your-maven-settings-config-id')
-        PATH = "${env.JAVA_HOME}/bin:${env.M2_HOME}/bin:${env.PATH}"
+        MAVEN_TOOL_NAME = 'Maven3' // Replace with your Maven tool name configured in Jenkins
+        MAVEN_SETTINGS_FILE_CREDENTIALS_ID = 'your-maven-settings-config-id'
+        EMAIL_RECIPIENT = 'your.email@example.com'
     }
 
     stages {
@@ -27,24 +26,17 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build and Upload Artifact') {
             steps {
                 script {
-                    // Generate the current date and build ID
-                    def currentDate = new Date().format('yyyyMMdd')
-                    def buildId = env.BUILD_ID
-                    
-                    // Run Ant with specified ANT_OPTS
-                    bat "${env.M2_HOME}/bin/mvn clean install -s ${env.MAVEN_SETTINGS_FILE} -DbuildDate=${currentDate} -DbuildId=${buildId}"
-                }
-            }
-        }
+                    def mavenHome = tool env.MAVEN_TOOL_NAME
+                    def mavenSettings = withCredentials([file(credentialsId: env.MAVEN_SETTINGS_FILE_CREDENTIALS_ID, variable: 'MAVEN_SETTINGS_FILE')]) {
+                        return "${env.MAVEN_SETTINGS_FILE}"
+                    }
 
-        stage('Upload Artifact') {
-            steps {
-                script {
-                    // Assuming your Maven project uses the 'deploy' goal to upload artifacts
-                    bat "${env.M2_HOME}/bin/mvn deploy -s ${env.MAVEN_SETTINGS_FILE}"
+                    bat "${mavenHome}/bin/mvn clean install deploy -s ${mavenSettings}"
+
+                    // Add additional Maven goals or parameters as needed
                 }
             }
         }
@@ -53,16 +45,16 @@ pipeline {
     post {
         success {
             emailext (
-                subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "The build was successful. Check Jenkins for details.",
-                to: 'your-success-email@example.com'
+                subject: "Build Successful: ${env.JOB_NAME} - #${env.BUILD_NUMBER}",
+                body: "The build succeeded. Check Jenkins for details.",
+                to: "${env.EMAIL_RECIPIENT}"
             )
         }
         failure {
             emailext (
-                subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                subject: "Build Failed: ${env.JOB_NAME} - #${env.BUILD_NUMBER}",
                 body: "The build failed. Check Jenkins for details.",
-                to: 'your-failure-email@example.com'
+                to: "${env.EMAIL_RECIPIENT}"
             )
         }
     }
