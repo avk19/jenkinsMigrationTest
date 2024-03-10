@@ -46,7 +46,7 @@ pipeline {
             steps {
                 script {
                     // Set up environment for Maven
-			withCredentials([usernamePassword(credentialsId: env.MAVEN_SETTINGS_ID, usernameVariable: 'MAVEN_USER', passwordVariable: 'MAVEN_PASSWORD')]) {
+			withCredentials([maven(serverCredentialId: "${MAVEN_SETTINGS_ID}", mavenSettingsConfig: "${MAVEN_SETTINGS_ID}")]) {
                         // Run Maven build with provided Maven settings
                         sh "mvn clean install deploy -s ${env.MAVEN_SETTINGS_ID}"
                     }
