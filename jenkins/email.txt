@@ -45,11 +45,12 @@ pipeline {
         stage('Upload Artifact with Maven') {
             steps {
                 script {
-                    // Set up environment for Maven
-			withCredentials([maven(serverCredentialId: "${MAVEN_SETTINGS_ID}", mavenSettingsConfig: "${MAVEN_SETTINGS_ID}")]) {
-                        // Run Maven build with provided Maven settings
-                        sh "mvn clean install deploy -s ${env.MAVEN_SETTINGS_ID}"
-                    }
+ withMaven(
+                    maven: 'Maven3', // Replace with your Maven tool name configured in Jenkins
+                    mavenSettingsConfig: "${env.MAVEN_SETTINGS}"
+                ) {
+                    bat 'mvn deploy:deploy-file -Durl=your-maven-repository-url -DrepositoryId=your-repo-id -Dfile=target/your-artifact.jar -DgroupId=your-group-id -DartifactId=your-artifact-id -Dversion=your-version -Dpackaging=jar'
+                }
 
                 }
             }
