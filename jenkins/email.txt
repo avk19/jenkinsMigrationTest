@@ -1,57 +1,50 @@
 pipeline {
     agent any
-
+    
     environment {
         REPO_URL = 'https://your-bitbucket-server.com/scm/yourproject/your-repo.git'
         CREDENTIALS_ID = 'your-credentials-id'
         JAVA_HOME = tool 'JDK_1.8' // Assuming JDK 1.8 is configured in Jenkins as a tool
-        ANT_HOME = tool 'ANT_HOME' // Assuming Ant is configured in Jenkins as a tool
-        MAVEN_HOME = tool 'Maven' // Assuming Maven is configured in Jenkins as a tool
-        EMAIL_NOTIFICATION = 'your.email@example.com'
-        // Define the MAVEN_OPTS environment variable with the active profile
-        MAVEN_OPTS = "-P your-maven-profile"
+        M2_HOME = tool 'Maven3' // Assuming Maven 3 is configured in Jenkins as a tool
+        MAVEN_SETTINGS_FILE = credentials('your-maven-settings-config-id')
+        PATH = "${env.JAVA_HOME}/bin:${env.M2_HOME}/bin:${env.PATH}"
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout([
-                    $class: 'GitSCM',
+                    $class: 'GitSCM', 
                     branches: [[name: "*/${env.BRANCH_NAME}"]],
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [],
-                    submoduleCfg: [],
+                    doGenerateSubmoduleConfigurations: false, 
+                    extensions: [], 
+                    submoduleCfg: [], 
                     userRemoteConfigs: [[
-                        credentialsId: "${env.CREDENTIALS_ID}",
+                        credentialsId: "${env.CREDENTIALS_ID}", 
                         url: "${env.REPO_URL}"
                     ]]
                 ])
             }
         }
 
-        stage('Build with Ant') {
+        stage('Build') {
             steps {
                 script {
-                    // Set up environment for Ant
-                    def antHome = tool name: 'Ant', type: 'hudson.tasks.Ant$AntInstallation'
-                    env.PATH = "${antHome}/bin:${env.PATH}"
-
-                    // Run Ant target
-                    sh "${antHome}/bin/ant your-ant-target"
+                    // Generate the current date and build ID
+                    def currentDate = new Date().format('yyyyMMdd')
+                    def buildId = env.BUILD_ID
+                    
+                    // Run Ant with specified ANT_OPTS
+                    bat "${env.M2_HOME}/bin/mvn clean install -s ${env.MAVEN_SETTINGS_FILE} -DbuildDate=${currentDate} -DbuildId=${buildId}"
                 }
             }
         }
 
-        stage('Upload Artifact with Maven') {
+        stage('Upload Artifact') {
             steps {
                 script {
- withMaven(
-                    maven: 'Maven3', // Replace with your Maven tool name configured in Jenkins
-                    mavenSettingsConfig: "${env.MAVEN_SETTINGS}"
-                ) {
-                    bat 'mvn deploy:deploy-file -Durl=your-maven-repository-url -DrepositoryId=your-repo-id -Dfile=target/your-artifact.jar -DgroupId=your-group-id -DartifactId=your-artifact-id -Dversion=your-version -Dpackaging=jar'
-                }
-
+                    // Assuming your Maven project uses the 'deploy' goal to upload artifacts
+                    bat "${env.M2_HOME}/bin/mvn deploy -s ${env.MAVEN_SETTINGS_FILE}"
                 }
             }
         }
@@ -59,26 +52,18 @@ pipeline {
 
     post {
         success {
-            script {
-                // Send success email
-                emailext (
-                    subject: "Build Success: ${env.JOB_NAME} ${env.BUILD_NUMBER}",
-                    body: "The build was successful. Check Jenkins for details.",
-                    recipientProviders: [[$class: 'DevelopersRecipientProvider']],
-                    to: "${env.EMAIL_NOTIFICATION}"
-                )
-            }
+            emailext (
+                subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "The build was successful. Check Jenkins for details.",
+                to: 'your-success-email@example.com'
+            )
         }
         failure {
-            script {
-                // Send failure email
-                emailext (
-                    subject: "Build Failure: ${env.JOB_NAME} ${env.BUILD_NUMBER}",
-                    body: "The build failed. Check Jenkins for details.",
-                    recipientProviders: [[$class: 'DevelopersRecipientProvider']],
-                    to: "${env.EMAIL_NOTIFICATION}"
-                )
-            }
+            emailext (
+                subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "The build failed. Check Jenkins for details.",
+                to: 'your-failure-email@example.com'
+            )
         }
     }
 }
