@@ -1,14 +1,10 @@
 pipeline {
     agent any
-
     environment {
         REPO_URL = 'https://your-bitbucket-server.com/scm/yourproject/your-repo.git'
-        CREDENTIALS_ID = 'your-credentials-id'
-        MAVEN_TOOL_NAME = 'Maven3' // Replace with your Maven tool name configured in Jenkins
-        MAVEN_SETTINGS_FILE_CREDENTIALS_ID = 'your-maven-settings-config-id'
-        EMAIL_RECIPIENT = 'your.email@example.com'
+        CREDENTIALS_ID = 'your-credentials-id' // Your Git credentials ID
+        MAVEN_SETTINGS_CREDENTIALS_ID = 'your-maven-settings-config-id' // Your Maven settings credentials ID
     }
-
     stages {
         stage('Checkout') {
             steps {
@@ -25,36 +21,35 @@ pipeline {
                 ])
             }
         }
-
-        stage('Build and Upload Artifact') {
+        stage('Build') {
             steps {
-                script {
-                    def mavenHome = tool env.MAVEN_TOOL_NAME
-                    def mavenSettings = withCredentials([file(credentialsId: env.MAVEN_SETTINGS_FILE_CREDENTIALS_ID, variable: 'MAVEN_SETTINGS_FILE')]) {
-                        return "${env.MAVEN_SETTINGS_FILE}"
+                withCredentials([string(credentialsId: "${env.MAVEN_SETTINGS_CREDENTIALS_ID}", variable: 'MAVEN_SETTINGS_FILE')]) {
+                    script {
+                        // Generate the current date and build ID
+                        def currentDate = new Date().format('yyyyMMdd')
+                        def buildId = env.BUILD_ID
+                        // Run Maven with specified settings.xml
+                        bat "mvn clean install -s %MAVEN_SETTINGS_FILE% -DbuildDate=${currentDate} -DbuildId=${buildId}"
                     }
-
-                    bat "${mavenHome}/bin/mvn clean install deploy -s ${mavenSettings}"
-
-                    // Add additional Maven goals or parameters as needed
                 }
             }
         }
     }
-
     post {
         success {
             emailext (
-                subject: "Build Successful: ${env.JOB_NAME} - #${env.BUILD_NUMBER}",
-                body: "The build succeeded. Check Jenkins for details.",
-                to: "${env.EMAIL_RECIPIENT}"
+                subject: 'Build Status: ${currentBuild.fullDisplayName}',
+                body: '''<p>Build completed successfully. Check Jenkins for details.</p>''',
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                to: 'your_success_email@example.com' // Specify recipient email(s) for success
             )
         }
         failure {
             emailext (
-                subject: "Build Failed: ${env.JOB_NAME} - #${env.BUILD_NUMBER}",
-                body: "The build failed. Check Jenkins for details.",
-                to: "${env.EMAIL_RECIPIENT}"
+                subject: 'Build Status: ${currentBuild.fullDisplayName}',
+                body: '''<p>Build failed. Check Jenkins for details.</p>''',
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                to: 'your_failure_email@example.com' // Specify recipient email(s) for failure
             )
         }
     }
