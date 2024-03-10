@@ -46,11 +46,13 @@ pipeline {
             steps {
                 script {
                     // Set up environment for Maven
-                    def mavenHome = tool name: 'Maven', type: 'hudson.tasks.Maven$MavenInstallation'
-                    env.PATH = "${mavenHome}/bin:${env.PATH}"
-
-                    // Run Maven upload with the active profile
-                    sh "${mavenHome}/bin/mvn deploy"
+withMaven(
+                        maven: 'Maven', // Specify the Maven installation name defined in Jenkins
+                        mavenSettingsConfig: 'your-maven-settings-id' // Specify the Maven settings file defined in Jenkins
+                    ) {
+                        // Run Maven goals
+                        sh 'mvn clean install'
+                    }
                 }
             }
         }
