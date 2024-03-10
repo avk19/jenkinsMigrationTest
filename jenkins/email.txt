@@ -46,13 +46,11 @@ pipeline {
             steps {
                 script {
                     // Set up environment for Maven
-withMaven(
-                        maven: 'Maven', // Specify the Maven installation name defined in Jenkins
-                        mavenSettingsConfig: 'your-maven-settings-id' // Specify the Maven settings file defined in Jenkins
-                    ) {
-                        // Run Maven goals
-                        sh 'mvn clean install'
+			withCredentials([usernamePassword(credentialsId: env.MAVEN_SETTINGS_ID, usernameVariable: 'MAVEN_USER', passwordVariable: 'MAVEN_PASSWORD')]) {
+                        // Run Maven build with provided Maven settings
+                        sh "mvn clean install deploy -s ${env.MAVEN_SETTINGS_ID}"
                     }
+
                 }
             }
         }
