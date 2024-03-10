@@ -5,6 +5,11 @@ pipeline {
         CREDENTIALS_ID = 'your-credentials-id'
         JAVA_OPTS = '-Dproperty=value'
         PATH = "${env.JAVA_HOME}\\bin;${env.PATH}"
+   	 // Define variables
+        BRANCH_NAME = "${env.BRANCH_NAME.replaceAll('/', '-').replaceAll('refs-', '').replaceAll('-', '_')}"
+        BUILD_ID = "${env.BUILD_ID}"
+        CURRENT_DATE = sh(script: 'date +%Y%m%d%H%M%S', returnStdout: true).trim()
+        GLOBAL_IDENTIFIER = "${BRANCH_NAME}_${BUILD_ID}_${CURRENT_DATE}"
     }
     stages {
         stage('Checkout') {
