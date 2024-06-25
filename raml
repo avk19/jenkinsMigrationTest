@@ -1,0 +1,28 @@
+<project>
+  ...
+  <build>
+    <plugins>
+      ...
+      <plugin>
+        <groupId>org.raml</groupId>
+        <artifactId>raml-to-jaxrs-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate-jaxrs</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${project.basedir}/src/main/resources</sourceDirectory>
+              <outputDirectory>${project.basedir}/target/generated-sources</outputDirectory>
+              <modelPackage>com.example.api.model</modelPackage>
+              <supportPackage>com.example.api.support</supportPackage>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      ...
+    </plugins>
+  </build>
+  ...
+</project>
